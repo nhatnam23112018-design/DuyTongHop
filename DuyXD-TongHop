@@ -1,0 +1,975 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "DuyTongHop",
+   Icon = 0, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
+   LoadingTitle = "Rayfield Interface Suite",
+   LoadingSubtitle = "by DuyXD",
+   ShowText = "Rayfield", -- for mobile users to unhide rayfield, change if you'd like
+   Theme = "Default", -- Check https://docs.sirius.menu/rayfield/configuration/themes
+
+   ToggleUIKeybind = "K", -- The keybind to toggle the UI visibility (string like "K" or Enum.KeyCode)
+
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false, -- Prevents Rayfield from warning when the script has a version mismatch with the interface
+
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil, -- Create a custom folder for your hub/game
+      FileName = "Big Hub"
+   },
+
+   {
+    TextColor = Color3.fromRGB(235, 245, 255), -- trắng hơi xanh
+    Background = Color3.fromRGB(10, 25, 40),   -- nền ocean tối
+    Topbar = Color3.fromRGB(15, 35, 55),
+    Shadow = Color3.fromRGB(5, 15, 25),
+
+    NotificationBackground = Color3.fromRGB(15, 35, 55),
+    NotificationActionsBackground = Color3.fromRGB(0, 120, 190),
+
+    TabBackground = Color3.fromRGB(20, 60, 90),
+    TabStroke = Color3.fromRGB(25, 75, 115),
+    TabBackgroundSelected = Color3.fromRGB(0, 140, 200),
+    TabTextColor = Color3.fromRGB(210, 230, 255),
+    SelectedTabTextColor = Color3.fromRGB(255, 255, 255),
+
+    ElementBackground = Color3.fromRGB(15, 45, 70),
+    ElementBackgroundHover = Color3.fromRGB(25, 65, 95),
+    SecondaryElementBackground = Color3.fromRGB(10, 35, 55),
+    ElementStroke = Color3.fromRGB(20, 80, 120),
+    SecondaryElementStroke = Color3.fromRGB(15, 60, 90),
+            
+    SliderBackground = Color3.fromRGB(0, 90, 160),
+    SliderProgress = Color3.fromRGB(0, 150, 255),
+    SliderStroke = Color3.fromRGB(0, 180, 255),
+
+    ToggleBackground = Color3.fromRGB(10, 35, 55),
+    ToggleEnabled = Color3.fromRGB(0, 145, 210),
+    ToggleDisabled = Color3.fromRGB(70, 90, 110),
+    ToggleEnabledStroke = Color3.fromRGB(0, 180, 255),
+    ToggleDisabledStroke = Color3.fromRGB(90, 110, 130),
+    ToggleEnabledOuterStroke = Color3.fromRGB(0, 110, 170),
+    ToggleDisabledOuterStroke = Color3.fromRGB(40, 60, 80),
+
+    DropdownSelected = Color3.fromRGB(25, 65, 100),
+    DropdownUnselected = Color3.fromRGB(15, 45, 70),
+
+    InputBackground = Color3.fromRGB(10, 35, 55),
+    InputStroke = Color3.fromRGB(20, 80, 130),
+    PlaceholderColor = Color3.fromRGB(180, 210, 230)
+}
+
+local Tab = Window:CreateTab("player", 4483362458) -- Title, Image
+
+local Section = Tab:CreateSection("Player")
+
+local UserInputService = game:GetService("UserInputService")
+local Player = game:GetService("Players").LocalPlayer
+local infiniteJumpEnabled = false
+
+local Toggle = Tab:CreateToggle({
+   Name = "Infinite Jump",
+   CurrentValue = false,
+   Flag = "InfiniteJumpToggle",
+   Callback = function(Value)
+      infiniteJumpEnabled = Value
+
+      if infiniteJumpEnabled then
+         -- Bật infinite jump
+         UserInputService.JumpRequest:Connect(function()
+            if infiniteJumpEnabled and Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then
+               Player.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+            end
+         end)
+      end
+   end,
+})
+
+local Workspace = game:GetService("Workspace")
+
+local Slider = Tab:CreateSlider({
+   Name = "Gravity",
+   Range = {0, 500},
+   Increment = 10,
+   Suffix = "Gravity",
+   CurrentValue = Workspace.Gravity,
+   Flag = "GravitySlider",
+   Callback = function(Value)
+      Workspace.Gravity = Value
+   end,
+})
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local Slider = Tab:CreateSlider({
+   Name = "JumpPower",
+   Range = {0, 200},
+   Increment = 5,
+   Suffix = "Power",
+   CurrentValue = 50,
+   Flag = "JumpPowerSlider",
+   Callback = function(Value)
+      local character = player.Character or player.CharacterAdded:Wait()
+      local humanoid = character:FindFirstChildOfClass("Humanoid")
+      if humanoid then
+         humanoid.JumpPower = Value
+      end
+   end,
+})
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local Slider = Tab:CreateSlider({
+   Name = "WalkSpeed",
+   Range = {0, 100},
+   Increment = 1,
+   Suffix = "Speed",
+   CurrentValue = 16,
+   Flag = "WalkSpeedSlider",
+   Callback = function(Value)
+      local character = player.Character or player.CharacterAdded:Wait()
+      local humanoid = character:FindFirstChildOfClass("Humanoid")
+      if humanoid then
+         humanoid.WalkSpeed = Value
+      end
+   end,
+})
+
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local espEnabled = false
+local drawings = {}
+
+local Toggle = Tab:CreateToggle({
+   Name = "ESP (Box + Tracker)",
+   CurrentValue = false,
+   Flag = "ESPBoxTracker",
+   Callback = function(Value)
+      espEnabled = Value
+      if not Value then
+         for _, v in pairs(drawings) do
+            v.box:Remove()
+            v.tracer:Remove()
+         end
+         drawings = {}
+      end
+   end,
+})
+
+RunService.RenderStepped:Connect(function()
+   if not espEnabled then return end
+
+   for _, player in pairs(Players:GetPlayers()) do
+      if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+         local hrp = player.Character.HumanoidRootPart
+         local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+
+         if not drawings[player] then
+            local box = Drawing.new("Square")
+            box.Color = Color3.new(0, 1, 0)
+            box.Thickness = 1.5
+            box.Filled = false
+
+            local tracer = Drawing.new("Line")
+            tracer.Color = Color3.new(0, 1, 0)
+            tracer.Thickness = 1.5
+
+            drawings[player] = {box = box, tracer = tracer}
+         end
+
+         local box = drawings[player].box
+         local tracer = drawings[player].tracer
+
+         if onScreen then
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            local height = (Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, humanoid.HipHeight, 0)).Y - pos.Y) * -2
+            local width = height / 2
+
+            box.Size = Vector2.new(width, height)
+            box.Position = Vector2.new(pos.X - width / 2, pos.Y - height / 2)
+            box.Visible = true
+
+            tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+            tracer.To = Vector2.new(pos.X, pos.Y)
+            tracer.Visible = true
+         else
+            box.Visible = false
+            tracer.Visible = false
+         end
+      elseif drawings[player] then
+         drawings[player].box.Visible = false
+         drawings[player].tracer.Visible = false
+      end
+   end
+end)
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local Slider = Tab:CreateSlider({
+   Name = "Player Hitbox",
+   Range = {2, 50},
+   Increment = 1,
+   Suffix = "Size",
+   CurrentValue = 5,
+   Flag = "PlayerHitboxSlider",
+   Callback = function(Value)
+      for _, player in pairs(Players:GetPlayers()) do
+         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = player.Character.HumanoidRootPart
+            hrp.Size = Vector3.new(Value, Value, Value)
+            hrp.Transparency = 0.7
+            hrp.Color = Color3.fromRGB(255, 0, 0)
+            hrp.Material = Enum.Material.Neon
+            hrp.CanCollide = false
+         end
+      end
+   end,
+})
+
+local Tab = Window:CreateTab("Tsb", 4483362458) -- Title, Image
+
+local Section = Tab:CreateSection("The Strongest Battleground")
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local Button = Tab:CreateButton({
+   Name = "Teleport to Mountain",
+   Callback = function()
+      local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+      local hrp = character:FindFirstChild("HumanoidRootPart")
+      if hrp then
+         -- Toạ độ khu đồi trong map TSB (ước lượng chuẩn nhất hiện tại)
+         hrp.CFrame = CFrame.new(-485, 215, -320) 
+      end
+   end,
+})
+
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local part -- lưu part để xóa khi tắt toggle
+
+local Toggle = Tab:CreateToggle({
+   Name = "anti void",
+   CurrentValue = false,
+   Flag = "VoidPartToggle",
+   Callback = function(Value)
+      if Value then
+         -- Nếu bật toggle
+         part = Instance.new("Part")
+         part.Size = Vector3.new(10000, 5, 10000)
+         part.Position = Vector3.new(0, -490, 0) -- void thường ở -500 → trên void 10 studs
+         part.Anchored = true
+         part.Transparency = 0.3
+         part.Color = Color3.fromRGB(0, 255, 0)
+         part.Material = Enum.Material.Neon
+         part.CanCollide = false
+
+         -- chỉ LocalPlayer đứng được
+         local weld = Instance.new("WeldConstraint")
+         weld.Part0 = part
+         weld.Part1 = nil
+         weld.Parent = part
+
+         part.Parent = Workspace
+
+         -- Cho phép LocalPlayer đứng trên đó
+         task.spawn(function()
+            while part and Value do
+               local character = LocalPlayer.Character
+               if character and character:FindFirstChild("HumanoidRootPart") then
+                  local hrp = character.HumanoidRootPart
+                  if hrp.Position.Y < part.Position.Y then
+                     hrp.Velocity = Vector3.new(0, 0, 0)
+                     hrp.Position = Vector3.new(hrp.Position.X, part.Position.Y + 5, hrp.Position.Z)
+                  end
+               end
+               task.wait(0.2)
+            end
+         end)
+      else
+         -- Nếu tắt toggle
+         if part then
+            part:Destroy()
+            part = nil
+         end
+      end
+   end,
+})
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+
+local Button = Tab:CreateButton({
+   Name = "Teleport to Void Part",
+   Callback = function()
+      local part = Workspace:FindFirstChild("Part")
+      local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+      local hrp = character:FindFirstChild("HumanoidRootPart")
+
+      if part and hrp then
+         hrp.CFrame = CFrame.new(part.Position + Vector3.new(0, 10, 0))
+      else
+         warn("❌ Không tìm thấy part hoặc nhân vật!")
+      end
+   end,
+})
+
+local Button = Tab:CreateButton({
+   Name = "auto farm kill",
+   Callback = function()
+   -- Auto Farm Kill FULL Mobile KRNL
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local workspace = game:GetService("Workspace")
+local player = Players.LocalPlayer
+
+-- CONFIG
+local LOW_HP = 25
+local SAFE_HP = 55
+local LOOP_DELAY = 0.05
+local PART_SIZE = 10000
+local PART_HEIGHT_OFFSET = 10
+
+-- ===== GUI =====
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AutoFarmKillGUI"
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 220, 0, 130)
+frame.Position = UDim2.new(0.4,0,0.35,0)
+frame.BackgroundColor3 = Color3.fromRGB(50,50,50)
+frame.Active = true
+frame.Draggable = true
+frame.Parent = screenGui
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,0,0,28)
+title.Position = UDim2.new(0,0,0,0)
+title.BackgroundTransparency = 0.5
+title.Text = "Auto Farm Kill"
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 18
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.Parent = frame
+
+local killBtn = Instance.new("TextButton")
+killBtn.Size = UDim2.new(0.6,0,0,36)
+killBtn.Position = UDim2.new(0.2,0,0.4,0)
+killBtn.Text = "Kill!"
+killBtn.BackgroundColor3 = Color3.fromRGB(200,50,50)
+killBtn.TextColor3 = Color3.fromRGB(255,255,255)
+killBtn.Parent = frame
+
+-- ===== STATE =====
+local killing = false
+local safePart = nil
+local paused = false
+
+-- ===== Functions =====
+local function createSafePart()
+    if workspace:FindFirstChild("AutoKillPart_TSB") then return end
+    local p = Instance.new("Part")
+    p.Name = "AutoKillPart_TSB"
+    p.Size = Vector3.new(PART_SIZE,1,PART_SIZE)
+    p.Position = Vector3.new(0, PART_HEIGHT_OFFSET, 0)
+    p.Anchored = true
+    p.CanCollide = true
+    p.Transparency = 0.3
+    p.BrickColor = BrickColor.new("Bright green")
+    p.Parent = workspace
+    safePart = p
+end
+
+local function highlightDeathCounter()
+    for _,pl in ipairs(Players:GetPlayers()) do
+        if pl ~= player and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") then
+            local hasDeathCounter = pl:FindFirstChild("DeathCounter")
+            if hasDeathCounter then
+                if not pl.Character:FindFirstChild("Highlight") then
+                    local hl = Instance.new("Highlight")
+                    hl.Name = "Highlight"
+                    hl.Adornee = pl.Character
+                    hl.FillColor = Color3.fromRGB(255,0,0)
+                    hl.OutlineColor = Color3.fromRGB(255,255,0)
+                    hl.Parent = pl.Character
+                end
+            end
+        end
+    end
+end
+
+local function getLowestHealthPlayer()
+    local target = nil
+    local lowest = math.huge
+    for _,pl in ipairs(Players:GetPlayers()) do
+        if pl ~= player and pl.Character and pl.Character:FindFirstChild("Humanoid") then
+            local humanoid = pl.Character.Humanoid
+            local hp = humanoid.Health
+            local awakened = pl:FindFirstChild("Awakened") or pl:FindFirstChild("Awake")
+            if hp > 0 and (not awakened or awakened.Value == false) then
+                if hp < lowest then
+                    lowest = hp
+                    target = pl
+                end
+            end
+        end
+    end
+    return target
+end
+
+local function lookAt(targetPos)
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(char.HumanoidRootPart.Position, targetPos)
+    end
+end
+
+local function teleportToTarget(target)
+    if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then return end
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    char.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame - (target.Character.HumanoidRootPart.CFrame.LookVector * 5)
+    lookAt(target.Character.HumanoidRootPart.Position)
+end
+
+local function teleportToPart()
+    if safePart and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(safePart.Position + Vector3.new(0,3,0))
+        paused = true
+    end
+end
+
+local function moveTargetBehindToFeet(target)
+    if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = player.Character.HumanoidRootPart
+    local targetHRP = target.Character.HumanoidRootPart
+    local lookVector = hrp.CFrame.LookVector
+    local toTarget = (targetHRP.Position - hrp.Position).Unit
+    local dot = lookVector:Dot(toTarget)
+    if dot < 0 then
+        targetHRP.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
+    end
+end
+
+-- ===== Auto Skill + Dash + M1 =====
+local function useSkillsAndDash(target)
+    for i=1,4 do
+        local key = tostring(i)
+        -- TODO: Fire actual skill RemoteEvent or KeyPress
+        print("Use Skill "..key.." on "..target.Name)
+        wait(0.15)
+    end
+    -- Dash = Q
+    print("Dash (Q) towards "..target.Name)
+    wait(0.1)
+    -- M1 attack
+    print("M1 attack on "..target.Name)
+end
+
+-- ===== Main Loop =====
+local function startAutoKill()
+    if killing then return end
+    killing = true
+    createSafePart()
+    spawn(function()
+        while killing do
+            highlightDeathCounter()
+            local char = player.Character
+            if not char or not char:FindFirstChild("Humanoid") then break end
+
+            -- HP check
+            if char.Humanoid.Health < LOW_HP then
+                teleportToPart()
+                repeat wait(0.1) until char.Humanoid.Health >= SAFE_HP
+                paused = false
+            end
+
+            if paused then wait(LOOP_DELAY) continue end
+
+            local target = getLowestHealthPlayer()
+            if target then
+                teleportToTarget(target)
+                moveTargetBehindToFeet(target)
+                useSkillsAndDash(target)
+            end
+
+            wait(LOOP_DELAY)
+        end
+        killing = false
+    end)
+end
+
+killBtn.MouseButton1Click:Connect(function()
+    startAutoKill()
+end)
+   -- The function that takes place when the button is pressed
+   end,
+})
+
+local Button = Tab:CreateButton({
+   Name = "void gui",
+   Callback = function()
+   --// ⚙️ VOID GUI - Teleport Tools (safe version)
+-- Tác dụng: tạo part to 10,000 stud ở trên void và có nút teleport
+-- + nút teleport đến người chơi ngẫu nhiên (chỉ client, không gây hại)
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
+
+-- Cấu hình part
+local VOID_HEIGHT = -10 -- cao hơn void 10 stud
+local PART_SIZE = Vector3.new(10000, 10, 10000)
+local PART_COLOR = Color3.fromRGB(0, 255, 0)
+
+-- Hàm tạo part
+local function createVoidPart()
+    local part = Instance.new("Part")
+    part.Name = "SafeVoidPart"
+    part.Anchored = true
+    part.CanCollide = true
+    part.Size = PART_SIZE
+    part.Color = PART_COLOR
+    part.Position = Vector3.new(0, VOID_HEIGHT, 0)
+    part.Parent = Workspace
+    return part
+end
+
+-- Tạo GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "Void GUI"
+gui.ResetOnSpawn = false
+gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 250, 0, 150)
+frame.Position = UDim2.new(0.4, 0, 0.4, 0)
+frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Parent = gui
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Text = "Void GUI"
+title.BackgroundTransparency = 0.3
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 20
+title.Parent = frame
+
+local tpPartButton = Instance.new("TextButton")
+tpPartButton.Size = UDim2.new(0.8, 0, 0, 40)
+tpPartButton.Position = UDim2.new(0.1, 0, 0.3, 0)
+tpPartButton.Text = "TP to Void Platform"
+tpPartButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+tpPartButton.TextColor3 = Color3.new(1, 1, 1)
+tpPartButton.Font = Enum.Font.SourceSansBold
+tpPartButton.TextSize = 16
+tpPartButton.Parent = frame
+
+local tpRandomButton = Instance.new("TextButton")
+tpRandomButton.Size = UDim2.new(0.8, 0, 0, 40)
+tpRandomButton.Position = UDim2.new(0.1, 0, 0.7, 0)
+tpRandomButton.Text = "TP to Random Player"
+tpRandomButton.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
+tpRandomButton.TextColor3 = Color3.new(1, 1, 1)
+tpRandomButton.Font = Enum.Font.SourceSansBold
+tpRandomButton.TextSize = 16
+tpRandomButton.Parent = frame
+
+-- Biến part
+local voidPart = nil
+
+-- Khi nhấn nút “TP to Void Platform”
+tpPartButton.MouseButton1Click:Connect(function()
+	local char = LocalPlayer.Character
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+
+	if not voidPart or not voidPart.Parent then
+		voidPart = createVoidPart()
+	end
+
+	local hrp = char.HumanoidRootPart
+	hrp.CFrame = CFrame.new(voidPart.Position + Vector3.new(0, 10, 0))
+end)
+
+-- Khi nhấn nút “TP to Random Player”
+tpRandomButton.MouseButton1Click:Connect(function()
+	local players = Players:GetPlayers()
+	if #players <= 1 then
+		warn("Không có người chơi khác để dịch chuyển đến.")
+		return
+	end
+
+	local char = LocalPlayer.Character
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+
+	-- Chọn người ngẫu nhiên khác bản thân
+	local target
+	repeat
+		target = players[math.random(1, #players)]
+	until target ~= LocalPlayer
+
+	if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+		local targetPos = target.Character.HumanoidRootPart.Position
+		char.HumanoidRootPart.CFrame = CFrame.new(targetPos + Vector3.new(0, 5, 0))
+	else
+		warn("Không tìm thấy nhân vật của người chơi đó.")
+	end
+end)
+
+print("[✅ Void GUI Loaded] - Safe teleport tools ready!")
+   -- The function that takes place when the button is pressed
+   end,
+})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local ESPEnabled = false
+local highlights = {}
+local rainbowConnection
+
+-- 🌈 Hàm tạo màu cầu vồng
+local function rainbowColor(t)
+	return Color3.fromHSV(t % 1, 1, 1)
+end
+
+local Toggle = Tab:CreateToggle({
+	Name = "ESP player Highlight",
+	CurrentValue = false,
+	Flag = "ESP_Rainbow",
+	Callback = function(Value)
+		ESPEnabled = Value
+
+		if Value then
+			-- 🟢 Bật ESP
+			for _, player in pairs(Players:GetPlayers()) do
+				if player ~= Players.LocalPlayer and player.Character then
+					local highlight = Instance.new("Highlight")
+					highlight.Name = "ESP_Highlight"
+					highlight.FillTransparency = 0.6
+					highlight.OutlineTransparency = 0
+					highlight.Parent = player.Character
+					highlights[player] = highlight
+				end
+			end
+
+			-- 🌈 Vòng lặp đổi màu
+			local hue = 0
+			rainbowConnection = RunService.RenderStepped:Connect(function(dt)
+				hue = hue + dt * 0.25
+				for _, highlight in pairs(highlights) do
+					if highlight and highlight.Parent then
+						local color = rainbowColor(hue)
+						highlight.FillColor = color
+						highlight.OutlineColor = color
+					end
+				end
+			end)
+		else
+			-- 🔴 Tắt ESP
+			if rainbowConnection then
+				rainbowConnection:Disconnect()
+				rainbowConnection = nil
+			end
+			for _, highlight in pairs(highlights) do
+				if highlight then
+					highlight:Destroy()
+				end
+			end
+			highlights = {}
+		end
+	end,
+})
+
+-- 👥 Tự thêm ESP khi người chơi mới vào
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function(char)
+		if ESPEnabled then
+			local highlight = Instance.new("Highlight")
+			highlight.Name = "ESP_Highlight"
+			highlight.FillTransparency = 0.6
+			highlight.OutlineTransparency = 0
+			highlight.Parent = char
+			highlights[player] = highlight
+		end
+	end)
+end)
+
+-- ❌ Xóa khi rời game
+Players.PlayerRemoving:Connect(function(player)
+	if highlights[player] then
+		highlights[player]:Destroy()
+		highlights[player] = nil
+	end
+end)
+
+local Tab = Window:CreateTab("99 Night", 4483362458) -- Title, Image
+
+local Section = Tab:CreateSection("99 Night In The Forest")
+
+-- Bring Item Mini GUI by ChatGPT x DuyXD
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local root = player.Character and player.Character:WaitForChild("HumanoidRootPart") or player.CharacterAdded:Wait():WaitForChild("HumanoidRootPart")
+
+-- GUI setup
+local gui = Instance.new("ScreenGui")
+gui.Name = "BringItemMiniGUI"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0.22, 0, 0.25, 0)
+frame.Position = UDim2.new(0.7, 0, 0.6, 0)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderColor3 = Color3.fromRGB(70, 70, 70)
+frame.Active = true
+frame.Draggable = true
+frame.Parent = gui
+
+local corner = Instance.new("UICorner", frame)
+corner.CornerRadius = UDim.new(0, 10)
+
+local title = Instance.new("TextLabel")
+title.Text = "Bring Item"
+title.Size = UDim2.new(1, 0, 0.25, 0)
+title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBold
+title.TextScaled = true
+title.Parent = frame
+
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1, -10, 0.55, 0)
+scroll.Position = UDim2.new(0, 5, 0.27, 0)
+scroll.CanvasSize = UDim2.new(0, 0, 2, 0)
+scroll.ScrollBarThickness = 4
+scroll.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+scroll.BorderColor3 = Color3.fromRGB(50, 50, 50)
+scroll.Parent = frame
+
+local corner2 = Instance.new("UICorner", scroll)
+corner2.CornerRadius = UDim.new(0, 6)
+
+-- Danh sách item (Fuel + Scrap cơ bản)
+local items = {
+    "Coal", "Fuel Canister", "Oil Fuel", "Log",
+    "Scrap Metal", "Scrap Iron", "Scrap Wire",
+    "Scrap Gear", "Scrap Pipe", "Scrap Engine", "Scrap Circuit"
+}
+
+local selected = {}
+
+for i, name in ipairs(items) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -10, 0, 25)
+    btn.Position = UDim2.new(0, 5, 0, (i - 1) * 28)
+    btn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.Gotham
+    btn.TextScaled = true
+    btn.Parent = scroll
+
+    local uiCorner = Instance.new("UICorner", btn)
+    uiCorner.CornerRadius = UDim.new(0, 5)
+
+    btn.MouseButton1Click:Connect(function()
+        if selected[name] then
+            selected[name] = nil
+            btn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+        else
+            selected[name] = true
+            btn.BackgroundColor3 = Color3.fromRGB(0, 200, 60)
+        end
+    end)
+end
+
+-- Nút Bring
+local bring = Instance.new("TextButton")
+bring.Size = UDim2.new(0.9, 0, 0.18, 0)
+bring.Position = UDim2.new(0.05, 0, 0.8, 0)
+bring.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+bring.Text = "Bring"
+bring.TextColor3 = Color3.fromRGB(255, 255, 255)
+bring.Font = Enum.Font.GothamBold
+bring.TextScaled = true
+bring.Parent = frame
+
+local bringCorner = Instance.new("UICorner", bring)
+bringCorner.CornerRadius = UDim.new(0, 8)
+
+-- Bring function (1 lần)
+local function bringItemsOnce()
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            for item in pairs(selected) do
+                if string.find(string.lower(obj.Name), string.lower(item)) then
+                    obj.CFrame = root.CFrame * CFrame.new(0, 10, 0)
+                end
+            end
+        end
+    end
+end
+
+bring.MouseButton1Click:Connect(bringItemsOnce)
+
+-- Kéo thả cho mobile (touch)
+local UserInputService = game:GetService("UserInputService")
+local dragging, dragInput, dragStart, startPos
+local function update(input)
+    local delta = input.Position - dragStart
+    frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+        startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+local RunService = game:GetService("RunService")
+local npcESPEnabled = false
+local espConnections = {}
+local npcHighlights = {}
+local npcTrackers = {}
+
+local function createESP(npc)
+    if not npc:FindFirstChild("HumanoidRootPart") then return end
+
+    -- Highlight
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = npc
+    highlight.FillColor = Color3.fromRGB(0, 200, 255)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.Parent = npc
+    npcHighlights[npc] = highlight
+
+    -- Billboard tracker
+    local billboard = Instance.new("BillboardGui")
+    billboard.Size = UDim2.new(0, 100, 0, 25)
+    billboard.AlwaysOnTop = true
+    billboard.Name = "Tracker"
+    billboard.Parent = npc.HumanoidRootPart
+
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(1, 0, 1, 0)
+    text.BackgroundTransparency = 1
+    text.Text = npc.Name
+    text.TextColor3 = Color3.fromRGB(0, 255, 255)
+    text.TextStrokeTransparency = 0
+    text.Font = Enum.Font.GothamBold
+    text.TextScaled = true
+    text.Parent = billboard
+
+    npcTrackers[npc] = billboard
+end
+
+local function clearESP()
+    for npc, hl in pairs(npcHighlights) do
+        if hl and hl.Parent then hl:Destroy() end
+    end
+    for npc, gui in pairs(npcTrackers) do
+        if gui and gui.Parent then gui:Destroy() end
+    end
+    npcHighlights = {}
+    npcTrackers = {}
+end
+
+local function updateESP()
+    for _, npc in pairs(workspace:GetDescendants()) do
+        if npc:IsA("Model") and npc:FindFirstChildOfClass("Humanoid") and not npc:IsDescendantOf(game.Players.LocalPlayer.Character) then
+            if not npcHighlights[npc] then
+                createESP(npc)
+            end
+        end
+    end
+end
+
+-- 🔘 Toggle setup (chèn vào GUI của bạn)
+local Toggle = Tab:CreateToggle({
+    Name = "ESP mob",
+    CurrentValue = false,
+    Flag = "NPCESP",
+    Callback = function(Value)
+        npcESPEnabled = Value
+        if Value then
+            updateESP()
+            espConnections["update"] = RunService.Heartbeat:Connect(updateESP)
+        else
+            if espConnections["update"] then
+                espConnections["update"]:Disconnect()
+                espConnections["update"] = nil
+            end
+            clearESP()
+        end
+    end
+})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+local BringChildren = false
+
+local function BringLostChildren()
+    while BringChildren do
+        task.wait(0.2)
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("Part") and v.Name:lower():find("child") then
+                local magnitude = (v.Position - humanoidRootPart.Position).Magnitude
+                if magnitude > 5 then
+                    v.CFrame = humanoidRootPart.CFrame * CFrame.new(math.random(-3,3), 0, math.random(-3,3))
+                end
+            end
+        end
+    end
+end
+
+local Toggle = Tab:CreateToggle({
+    Name = "Bring the child to your place",
+    CurrentValue = false,
+    Flag = "BringChildrenToggle",
+    Callback = function(Value)
+        BringChildren = Value
+        if Value then
+            task.spawn(BringLostChildren)
+        end
+    end
+})
