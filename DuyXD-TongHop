@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DuyTongHop",
+   Name = "DuyXD-Tong-Hop",
    Icon = 0, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
    LoadingTitle = "Rayfield Interface Suite",
    LoadingSubtitle = "by DuyXD",
@@ -19,46 +19,23 @@ local Window = Rayfield:CreateWindow({
       FileName = "Big Hub"
    },
 
-   {
-    TextColor = Color3.fromRGB(235, 245, 255), -- trắng hơi xanh
-    Background = Color3.fromRGB(10, 25, 40),   -- nền ocean tối
-    Topbar = Color3.fromRGB(15, 35, 55),
-    Shadow = Color3.fromRGB(5, 15, 25),
+   Discord = {
+      Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
+      Invite = "noinvitelink", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ ABCD would be ABCD
+      RememberJoins = true -- Set this to false to make them join the discord every time they load it up
+   },
 
-    NotificationBackground = Color3.fromRGB(15, 35, 55),
-    NotificationActionsBackground = Color3.fromRGB(0, 120, 190),
-
-    TabBackground = Color3.fromRGB(20, 60, 90),
-    TabStroke = Color3.fromRGB(25, 75, 115),
-    TabBackgroundSelected = Color3.fromRGB(0, 140, 200),
-    TabTextColor = Color3.fromRGB(210, 230, 255),
-    SelectedTabTextColor = Color3.fromRGB(255, 255, 255),
-
-    ElementBackground = Color3.fromRGB(15, 45, 70),
-    ElementBackgroundHover = Color3.fromRGB(25, 65, 95),
-    SecondaryElementBackground = Color3.fromRGB(10, 35, 55),
-    ElementStroke = Color3.fromRGB(20, 80, 120),
-    SecondaryElementStroke = Color3.fromRGB(15, 60, 90),
-            
-    SliderBackground = Color3.fromRGB(0, 90, 160),
-    SliderProgress = Color3.fromRGB(0, 150, 255),
-    SliderStroke = Color3.fromRGB(0, 180, 255),
-
-    ToggleBackground = Color3.fromRGB(10, 35, 55),
-    ToggleEnabled = Color3.fromRGB(0, 145, 210),
-    ToggleDisabled = Color3.fromRGB(70, 90, 110),
-    ToggleEnabledStroke = Color3.fromRGB(0, 180, 255),
-    ToggleDisabledStroke = Color3.fromRGB(90, 110, 130),
-    ToggleEnabledOuterStroke = Color3.fromRGB(0, 110, 170),
-    ToggleDisabledOuterStroke = Color3.fromRGB(40, 60, 80),
-
-    DropdownSelected = Color3.fromRGB(25, 65, 100),
-    DropdownUnselected = Color3.fromRGB(15, 45, 70),
-
-    InputBackground = Color3.fromRGB(10, 35, 55),
-    InputStroke = Color3.fromRGB(20, 80, 130),
-    PlaceholderColor = Color3.fromRGB(180, 210, 230)
-}
+   KeySystem = false, -- Set this to true to use our key system
+   KeySettings = {
+      Title = "Untitled",
+      Subtitle = "Key System",
+      Note = "No method of obtaining the key is provided", -- Use this to tell the user how to get a key
+      FileName = "Key", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
+      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+      GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
+      Key = {"Hello"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
+   }
+})
 
 local Tab = Window:CreateTab("player", 4483362458) -- Title, Image
 
