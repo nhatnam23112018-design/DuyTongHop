@@ -1,0 +1,398 @@
+-- Forsaken GUI (KRNL) - Final (no auto-aim / no auto-block)
+-- Features: Full Bridge, Speed (BodyVelocity), Reach (trigger on skill), ESP toggle
+-- Mobile touch drag supported. GUI shows on load.
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+local function getChar() return player.Character or player.CharacterAdded:Wait() end
+
+-- Remove previous GUI if exists
+if player.PlayerGui:FindFirstChild("ForsakenGUI") then
+    player.PlayerGui.ForsakenGUI:Destroy()
+end
+
+-- ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ForsakenGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- Main Frame (compact but neat)
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 200, 0, 200)
+Frame.Position = UDim2.new(0.75, 0, 0.2, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Parent = ScreenGui
+local UICorner = Instance.new("UICorner", Frame)
+UICorner.CornerRadius = UDim.new(0,8)
+
+-- Title
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1, 0, 0, 28)
+Title.Position = UDim2.new(0,0,0,0)
+Title.BackgroundTransparency = 1
+Title.Text = "Forsaken GUI"
+Title.TextColor3 = Color3.fromRGB(255,255,255)
+Title.Font = Enum.Font.GothamBold
+Title.TextScaled = true
+
+-- Full Bridge button
+local FullBridge = Instance.new("TextButton", Frame)
+FullBridge.Size = UDim2.new(1, -16, 0, 28)
+FullBridge.Position = UDim2.new(0,8,0,34)
+FullBridge.BackgroundColor3 = Color3.fromRGB(55,55,55)
+FullBridge.TextColor3 = Color3.fromRGB(255,255,255)
+FullBridge.Text = "Full Bridge"
+FullBridge.Font = Enum.Font.Gotham
+FullBridge.TextScaled = true
+Instance.new("UICorner", FullBridge)
+
+FullBridge.MouseButton1Click:Connect(function()
+    -- Remove common post-processing effects if present
+    pcall(function()
+        local lighting = game:GetService("Lighting")
+        lighting.FogEnd = 1e9
+        lighting.Brightness = 2
+        lighting.ClockTime = 14
+        lighting.GlobalShadows = false
+        -- try to remove common effects objects
+        for _, v in pairs(lighting:GetChildren()) do
+            if v:IsA("Atmosphere") or v:IsA("ColorCorrectionEffect") or v:IsA("BloomEffect") or v:IsA("BlurEffect") or v:IsA("DepthOfFieldEffect") or v:IsA("SunRaysEffect") or v:IsA("Sky") then
+                pcall(function() v:Destroy() end)
+            end
+        end
+        -- try to reduce quality
+        pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Level01 end)
+        -- remove particle-like objects in Workspace (best-effort)
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+                pcall(function() obj.Enabled = false end)
+            end
+        end
+    end)
+end)
+
+-- Speed label + textbox
+local speedLabel = Instance.new("TextLabel", Frame)
+speedLabel.Size = UDim2.new(0.52, -12, 0, 20)
+speedLabel.Position = UDim2.new(0,8,0,70)
+speedLabel.BackgroundTransparency = 1
+speedLabel.TextColor3 = Color3.fromRGB(255,255,255)
+speedLabel.Font = Enum.Font.Gotham
+speedLabel.Text = "Speed: 16"
+speedLabel.TextScaled = true
+
+local speedBox = Instance.new("TextBox", Frame)
+speedBox.Size = UDim2.new(0.44, -12, 0, 24)
+speedBox.Position = UDim2.new(0.52, 4, 0, 68)
+speedBox.Text = "16"
+speedBox.ClearTextOnFocus = false
+speedBox.BackgroundColor3 = Color3.fromRGB(45,45,45)
+speedBox.TextColor3 = Color3.fromRGB(255,255,255)
+Instance.new("UICorner", speedBox)
+
+-- Reach label + textbox
+local reachLabel = Instance.new("TextLabel", Frame)
+reachLabel.Size = UDim2.new(0.52, -12, 0, 20)
+reachLabel.Position = UDim2.new(0,8,0,100)
+reachLabel.BackgroundTransparency = 1
+reachLabel.TextColor3 = Color3.fromRGB(255,255,255)
+reachLabel.Font = Enum.Font.Gotham
+reachLabel.Text = "Reach: 10"
+reachLabel.TextScaled = true
+
+local reachBox = Instance.new("TextBox", Frame)
+reachBox.Size = UDim2.new(0.44, -12, 0, 24)
+reachBox.Position = UDim2.new(0.52, 4, 0, 98)
+reachBox.Text = "10"
+reachBox.ClearTextOnFocus = false
+reachBox.BackgroundColor3 = Color3.fromRGB(45,45,45)
+reachBox.TextColor3 = Color3.fromRGB(255,255,255)
+Instance.new("UICorner", reachBox)
+
+-- ESP toggle
+local espToggle = Instance.new("TextButton", Frame)
+espToggle.Size = UDim2.new(1, -16, 0, 28)
+espToggle.Position = UDim2.new(0,8,0,132)
+espToggle.BackgroundColor3 = Color3.fromRGB(55,55,55)
+espToggle.TextColor3 = Color3.fromRGB(255,255,255)
+espToggle.Text = "ESP: OFF"
+espToggle.Font = Enum.Font.Gotham
+espToggle.TextScaled = true
+Instance.new("UICorner", espToggle)
+
+local espEnabled = false
+espToggle.MouseButton1Click:Connect(function()
+    espEnabled = not espEnabled
+    espToggle.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
+end)
+
+-- Small help text
+local help = Instance.new("TextLabel", Frame)
+help.Size = UDim2.new(1, -16, 0, 16)
+help.Position = UDim2.new(0,8,0,168)
+help.BackgroundTransparency = 1
+help.Font = Enum.Font.Gotham
+help.TextColor3 = Color3.fromRGB(200,200,200)
+help.TextScaled = true
+help.Text = "Reach triggers on detected skill (HP>150)"
+help.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Dragging (touch + mouse)
+do
+    local dragging, dragInput, dragStart, startPos
+    Frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = Frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    Frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input == dragInput then
+            local delta = input.Position - dragStart
+            Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+-- UTIL: find nearest player (excluding local)
+local function findNearestPlayer(maxRange)
+    local char = getChar()
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    local mypos = char.HumanoidRootPart.Position
+    local nearest, nDist = nil, math.huge
+    for _, pl in pairs(Players:GetPlayers()) do
+        if pl ~= player and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") and pl.Character:FindFirstChildOfClass("Humanoid") then
+            local hum = pl.Character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 then
+                local p = pl.Character.HumanoidRootPart.Position
+                local d = (p - mypos).Magnitude
+                if d < nDist and d <= (maxRange or 1e9) then
+                    nearest = pl
+                    nDist = d
+                end
+            end
+        end
+    end
+    return nearest, nDist
+end
+
+-- BODYVELOCITY speed system (safe pattern)
+local bv = nil
+local bvConnection = nil
+local function enableSpeed(value)
+    local char = getChar()
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+
+    -- clear old
+    if bv and bv.Parent then pcall(function() bv:Destroy() end) end
+    if bvConnection then bvConnection:Disconnect() bvConnection = nil end
+
+    bv = Instance.new("BodyVelocity")
+    bv.Name = "ForsakenSpeedBV"
+    bv.MaxForce = Vector3.new(0,0,0)
+    bv.Velocity = Vector3.new(0,0,0)
+    bv.Parent = hrp
+
+    -- update each RenderStepped (only when moving)
+    bvConnection = RunService.RenderStepped:Connect(function()
+        local ch = getChar()
+        local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+        if not ch or not hum then return end
+        local dir = hum.MoveDirection
+        if dir.Magnitude > 0.01 then
+            -- Set a reasonable MaxForce to feel natural
+            bv.MaxForce = Vector3.new(1e5, 0, 1e5)
+            -- apply horizontal velocity according to desired speed
+            local speed = math.clamp(tonumber(value) or 16, 1, 100)
+            bv.Velocity = Vector3.new(dir.X * speed, 0, dir.Z * speed)
+        else
+            bv.MaxForce = Vector3.new(0,0,0)
+            bv.Velocity = Vector3.new(0,0,0)
+        end
+    end)
+end
+
+local function disableSpeed()
+    if bvConnection then bvConnection:Disconnect() bvConnection = nil end
+    if bv and bv.Parent then pcall(function() bv:Destroy() end) end
+    bv = nil
+end
+
+-- apply speed when focus lost or enter pressed
+speedBox.FocusLost:Connect(function()
+    local v = tonumber(speedBox.Text)
+    if not v then speedBox.Text = "16" v = 16 end
+    v = math.clamp(v, 1, 100)
+    speedLabel.Text = "Speed: "..v
+    enableSpeed(v)
+end)
+speedBox.FocusLost:Connect(function() end)
+speedBox.FocusLost:Connect(function() end)
+speedBox.ClearTextOnFocus = false
+-- also allow pressing Enter
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.Return and ScreenGui.Parent then
+        local focused = UserInputService:GetFocusedTextBox()
+        if focused == speedBox then
+            speedBox:ReleaseFocus()
+        elseif focused == reachBox then
+            reachBox:ReleaseFocus()
+        end
+    end
+end)
+
+-- reach value handling
+local reachValue = 10
+reachBox.FocusLost:Connect(function()
+    local v = tonumber(reachBox.Text)
+    if not v then v = 10 end
+    v = math.clamp(v, 5, 40)
+    reachValue = v
+    reachBox.Text = tostring(v)
+    reachLabel.Text = "Reach: "..v
+end)
+
+-- ESP implementation (highlight + color rules)
+local espRecords = {}
+local function clearAllESP()
+    for pl, data in pairs(espRecords) do
+        if data.hl and data.hl.Parent then pcall(function() data.hl:Destroy() end) end
+        espRecords[pl] = nil
+    end
+end
+
+local function updateESP()
+    for _, pl in pairs(Players:GetPlayers()) do
+        if pl ~= player and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") and pl.Character:FindFirstChildOfClass("Humanoid") then
+            local hum = pl.Character:FindFirstChildOfClass("Humanoid")
+            local hp = hum and hum.Health or 0
+            if not espRecords[pl] then espRecords[pl] = {} end
+            if not espRecords[pl].hl then
+                local hl = Instance.new("Highlight")
+                hl.Adornee = pl.Character
+                hl.Parent = pl.Character
+                hl.OutlineTransparency = 0
+                hl.FillTransparency = 0.7
+                espRecords[pl].hl = hl
+            end
+            local hl = espRecords[pl].hl
+            if hp > 150 then
+                hl.FillColor = Color3.fromRGB(255,0,0)
+                hl.OutlineColor = Color3.fromRGB(150,0,0)
+            elseif hp < 130 then
+                hl.FillColor = Color3.fromRGB(0,200,0)
+                hl.OutlineColor = Color3.fromRGB(0,120,0)
+            else
+                -- medium players (between 130-150) get neutral color
+                hl.FillColor = Color3.fromRGB(180,180,180)
+                hl.OutlineColor = Color3.fromRGB(120,120,120)
+            end
+        end
+    end
+end
+
+-- detection of skill usage (best-effort)
+local skillDetectedCallbacks = {}
+local function onSkillDetected()
+    -- when skill detected, perform reach action if hp>150
+    local ch = getChar()
+    if not ch then return end
+    local hum = ch:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    if hum.Health <= 150 then return end
+
+    -- find nearest player in reachValue range
+    local target, dist = findNearestPlayer(reachValue)
+    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+        -- teleport near target (3 studs behind)
+        local trgHRP = target.Character.HumanoidRootPart
+        local myChar = getChar()
+        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+            local offset = Vector3.new(0, 0, -3)
+            -- attempt smooth-ish CFrame move (one-time)
+            pcall(function()
+                myChar.HumanoidRootPart.CFrame = trgHRP.CFrame * CFrame.new(0, 0, -3)
+            end)
+        end
+    end
+end
+
+-- try to auto-detect RemoteEvent names that look like skill usage and hook (best-effort)
+for _, obj in pairs(ReplicatedStorage:GetDescendants()) do
+    if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+        local nameLower = string.lower(obj.Name)
+        if nameLower:find("skill") or nameLower:find("use_skill") or nameLower:find("cast") or nameLower:find("ability") then
+            -- try to connect OnClientEvent if RemoteEvent
+            if obj:IsA("RemoteEvent") then
+                pcall(function()
+                    obj.OnClientEvent:Connect(function(...)
+                        -- simple heuristic: if it's player casting, trigger
+                        onSkillDetected()
+                    end)
+                end)
+            end
+        end
+    end
+end
+
+-- fallback: also listen to player pressing key "1" (useful for testing)
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.One then
+        onSkillDetected()
+    end
+end)
+
+-- Main loops
+-- 1) ESP updater (0.2s)
+task.spawn(function()
+    while task.wait(0.2) do
+        if espEnabled then
+            pcall(updateESP)
+        else
+            -- clean if previously created
+            pcall(clearAllESP)
+        end
+    end
+end)
+
+-- Ensure speed disabled on script stop / character respawn
+local function cleanupSpeed()
+    disableSpeed()
+end
+
+player.CharacterAdded:Connect(function()
+    cleanupSpeed()
+    task.wait(0.5)
+end)
+
+-- Clean highlights on leaving
+player.AncestryChanged:Connect(function()
+    if not player:IsDescendantOf(game) then
+        clearAllESP()
+        cleanupSpeed()
+    end
+end)
+
+-- End of script
+print("[ForsakenGUI] Loaded")
